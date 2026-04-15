@@ -1,0 +1,1107 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    window.db = db;
+    window.auth = auth;
+    window.fb = { collection, addDoc, getDocs, updateDoc, doc };
+  </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LibraScan – Smart Library System</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--ink:#1a1208;--parchment:#f7f2e8;--cream:#fdf9f0;--gold:#c8922a;--gold-light:#e8b84b;--rust:#8b3a1e;--sage:#4a6741;--sage-light:#d4e5d0;--muted:#8a7d6b;--border:#ddd3be;--card:#fffdf7;--shadow:rgba(26,18,8,0.13);--admin:#1a2f4a;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#d9d1c0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:20px 12px;background-image:radial-gradient(circle at 15% 15%,rgba(200,146,42,.09),transparent 55%),radial-gradient(circle at 85% 80%,rgba(74,103,65,.08),transparent 55%);}
+.phone{width:390px;min-height:844px;background:var(--cream);border-radius:48px;box-shadow:0 36px 90px rgba(0,0,0,.32),0 0 0 1px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.65);overflow:hidden;display:flex;flex-direction:column;}
+.notch{width:120px;height:32px;background:var(--ink);border-radius:0 0 20px 20px;margin:0 auto;flex-shrink:0;}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
+.screen::-webkit-scrollbar{display:none;}
+.page{display:none;flex-direction:column;flex:1;animation:fadeUp .3s ease;}
+.page.active{display:flex;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+ 
+/* ROLE SELECT */
+.role-bg{flex:1;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;position:relative;overflow:hidden;}
+.role-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(200,146,42,.18),transparent 60%);}
+.rlogo{font-family:'Playfair Display',serif;font-size:34px;color:var(--parchment);letter-spacing:-.5px;margin-bottom:5px;position:relative;}
+.rlogo span{color:var(--gold-light);}
+.rtag{font-size:12px;color:rgba(247,242,232,.4);margin-bottom:44px;letter-spacing:.3px;text-align:center;position:relative;}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;position:relative;}
+.role-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s;}
+.role-card:hover{background:rgba(255,255,255,.1);transform:translateY(-2px);}
+.role-card:active{transform:scale(.97);}
+.rc-icon{font-size:40px;margin-bottom:12px;display:block;}
+.rc-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--parchment);margin-bottom:4px;}
+.rc-sub{font-size:11px;color:rgba(247,242,232,.4);line-height:1.4;}
+.qr-trigger{position:relative;display:inline-flex;align-items:center;gap:8px;background:rgba(200,146,42,.13);border:1px solid rgba(200,146,42,.28);border-radius:12px;padding:10px 18px;cursor:pointer;margin-top:28px;}
+.qr-trigger span{font-size:12px;color:rgba(247,242,232,.55);}
+ 
+/* ADMIN CODE GATE */
+.code-gate{flex:1;background:var(--admin);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 28px;}
+.gate-icon{font-size:52px;margin-bottom:16px;}
+.gate-title{font-family:'Playfair Display',serif;font-size:22px;color:white;margin-bottom:6px;text-align:center;}
+.gate-sub{font-size:13px;color:rgba(255,255,255,.38);text-align:center;margin-bottom:30px;line-height:1.5;max-width:280px;}
+.code-dots{display:flex;gap:12px;justify-content:center;margin-bottom:26px;}
+.cdot{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);transition:all .2s;}
+.cdot.filled{background:var(--gold-light);border-color:var(--gold-light);box-shadow:0 0 8px rgba(232,184,75,.4);}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:240px;}
+.nk{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:14px;height:56px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:white;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
+.nk:active{background:rgba(200,146,42,.3);border-color:var(--gold-light);transform:scale(.95);}
+.gate-err{font-size:12px;color:#ff6b6b;text-align:center;margin-top:12px;min-height:18px;}
+.gate-hint{font-size:11px;color:rgba(255,255,255,.18);margin-top:6px;font-family:'DM Mono',monospace;}
+.gate-back{margin-top:18px;font-size:13px;color:rgba(255,255,255,.3);cursor:pointer;}
+ 
+/* AUTH */
+.auth-top{background:var(--ink);padding:30px 26px 38px;position:relative;overflow:hidden;}
+.auth-top::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:24px;background:var(--cream);border-radius:24px 24px 0 0;}
+.auth-back{display:flex;align-items:center;gap:6px;color:rgba(247,242,232,.48);font-size:13px;cursor:pointer;margin-bottom:20px;}
+.auth-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(200,146,42,.18);color:var(--gold-light);font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:12px;letter-spacing:.3px;}
+.auth-htitle{font-family:'Playfair Display',serif;font-size:26px;color:var(--parchment);}
+.auth-hsub{font-size:13px;color:rgba(247,242,232,.42);margin-top:4px;}
+.auth-body{padding:24px 22px;}
+.tab-row{display:flex;background:rgba(26,18,8,.07);border-radius:12px;padding:4px;margin-bottom:20px;}
+.tab-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .18s;}
+.tab-btn.on{background:white;color:var(--ink);box-shadow:0 2px 6px var(--shadow);}
+.fl{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;}
+.fi{width:100%;border:1.5px solid var(--border);border-radius:11px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:white;outline:none;margin-bottom:12px;transition:border-color .15s;}
+.fi:focus{border-color:var(--gold);}
+.err-msg{font-size:12px;color:var(--rust);margin-bottom:10px;text-align:center;min-height:16px;}
+.btn-gold{width:100%;background:var(--gold);border:none;border-radius:13px;padding:13px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:white;cursor:pointer;transition:all .15s;box-shadow:0 4px 14px rgba(200,146,42,.3);}
+.btn-gold:active{transform:scale(.98);}
+ 
+/* SHELL */
+.app-shell{display:flex;flex-direction:column;flex:1;}
+.cscroll{flex:1;overflow-y:auto;padding-bottom:8px;}
+.cscroll::-webkit-scrollbar{display:none;}
+.bnav{background:rgba(253,249,240,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0 20px;flex-shrink:0;}
+.ni-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 10px;border-radius:12px;}
+.ni-wrap .ni{font-size:20px;color:var(--muted);transition:color .15s;}
+.ni-wrap .nl{font-size:10px;color:var(--muted);font-weight:500;transition:color .15s;}
+.ni-wrap.on .ni,.ni-wrap.on .nl{color:var(--gold);}
+ 
+/* ADMIN HERO */
+.admin-hero{background:var(--admin);padding:20px 22px 24px;position:relative;overflow:hidden;}
+.admin-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:110px;height:110px;background:rgba(61,139,205,.14);border-radius:50%;}
+.ah-lbl{font-size:10px;color:rgba(255,255,255,.38);letter-spacing:.5px;text-transform:uppercase;}
+.ah-name{font-family:'Playfair Display',serif;font-size:21px;color:white;margin-top:2px;}
+.ah-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(61,139,205,.22);color:#7ec8f0;font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;margin-top:6px;letter-spacing:.3px;}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 20px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px;box-shadow:0 2px 5px var(--shadow);}
+.kpi-num{font-family:'Playfair Display',serif;font-size:24px;color:var(--ink);}
+.kpi-lbl{font-size:11px;color:var(--muted);margin-top:1px;}
+.kpi-t{font-size:10px;margin-top:4px;font-weight:500;}
+.tup{color:var(--sage);}.tdn{color:var(--rust);}
+.sec-head{display:flex;justify-content:space-between;align-items:center;padding:4px 20px 8px;}
+.sec-head h3{font-family:'Playfair Display',serif;font-size:16px;color:var(--ink);}
+.sec-head a{font-size:12px;color:var(--gold);cursor:pointer;}
+.brow{display:flex;align-items:center;gap:11px;padding:10px 20px;border-bottom:1px solid rgba(221,211,190,.4);cursor:pointer;}
+.brow:active{background:rgba(200,146,42,.04);}
+.bico{width:40px;height:50px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.bname{font-size:13px;font-weight:500;color:var(--ink);}
+.bmeta{font-size:11px;color:var(--muted);margin-top:1px;}
+.bshelf{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);background:rgba(200,146,42,.1);padding:2px 6px;border-radius:4px;margin-top:3px;display:inline-block;}
+.sp{font-size:9px;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;flex-shrink:0;}
+.sp-av{background:var(--sage-light);color:var(--sage);}.sp-br{background:#fde8d8;color:var(--rust);}
+.urow{display:flex;align-items:center;gap:11px;padding:10px 20px;border-bottom:1px solid rgba(221,211,190,.4);}
+.uav-sm{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:white;flex-shrink:0;}
+.uname{font-size:13px;font-weight:500;color:var(--ink);}
+.uid{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+ 
+/* ADD BOOK */
+.add-wrap{padding:16px 20px;}
+.scan-box{background:var(--ink);border-radius:18px;height:185px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;margin-bottom:14px;cursor:pointer;}
+.sc-c::before,.sc-c::after,.sc-c span::before,.sc-c span::after{content:'';position:absolute;width:20px;height:20px;border-color:var(--gold-light);border-style:solid;}
+.sc-c::before{top:16px;left:16px;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
+.sc-c::after{top:16px;right:16px;border-width:2px 2px 0 0;border-radius:0 3px 0 0;}
+.sc-c span::before{bottom:16px;left:16px;border-width:0 0 2px 2px;border-radius:0 0 0 3px;}
+.sc-c span::after{bottom:16px;right:16px;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
+.sline{position:absolute;left:14px;right:14px;height:2px;background:linear-gradient(90deg,transparent,var(--gold-light),transparent);animation:smov 2s ease-in-out infinite;}
+@keyframes smov{0%,100%{top:16px}50%{top:160px}}
+.scan-hint{position:absolute;bottom:11px;left:0;right:0;text-align:center;font-size:11px;color:rgba(247,242,232,.35);}
+.form-r{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mb12{margin-bottom:12px;}
+.add-btn{width:100%;background:var(--ink);border:none;border-radius:13px;padding:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--parchment);cursor:pointer;margin-top:4px;}
+.toast{display:none;background:var(--sage);color:white;border-radius:10px;padding:10px 14px;text-align:center;font-size:13px;font-weight:500;margin-top:10px;}
+ 
+/* USER HERO */
+.user-hero{background:linear-gradient(135deg,#2d1a08,var(--ink));padding:20px 22px 26px;position:relative;overflow:hidden;}
+.user-hero::before{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(200,146,42,.1);border-radius:50%;}
+.uh-lbl{font-size:10px;color:rgba(247,242,232,.38);letter-spacing:.5px;text-transform:uppercase;}
+.uh-name{font-family:'Playfair Display',serif;font-size:22px;color:var(--parchment);margin-top:3px;}
+.uh-id{font-family:'DM Mono',monospace;font-size:10px;color:rgba(247,242,232,.33);margin-top:2px;}
+.uh-dept{font-size:11px;color:rgba(247,242,232,.4);margin-top:2px;}
+.reading-card{background:rgba(200,146,42,.12);border:1px solid rgba(200,146,42,.25);border-radius:13px;padding:11px 13px;margin-top:12px;display:flex;align-items:center;gap:10px;}
+.no-book-card{background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.14);border-radius:13px;padding:12px 14px;margin-top:12px;text-align:center;}
+.u-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 20px 0;}
+.us{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 7px;text-align:center;}
+.us-num{font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);}
+.us-lbl{font-size:10px;color:var(--muted);margin-top:1px;}
+.bb-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:0 20px 10px;display:flex;gap:11px;cursor:pointer;}
+.bb-cov{width:44px;height:56px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.bb-title{font-size:13px;font-weight:600;color:var(--ink);}
+.bb-author{font-size:11px;color:var(--muted);margin-top:1px;}
+.bb-shelf{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);background:rgba(200,146,42,.1);padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;}
+.bb-due{font-size:11px;font-weight:500;margin-top:4px;}
+.ret-btn{align-self:center;background:transparent;border:1.5px solid var(--border);border-radius:8px;padding:6px 9px;font-size:11px;font-weight:500;color:var(--ink);cursor:pointer;flex-shrink:0;}
+.empty-state{padding:30px 24px;text-align:center;}
+.es-icon{font-size:44px;margin-bottom:10px;}
+.es-t{font-family:'Playfair Display',serif;font-size:17px;color:var(--ink);margin-bottom:5px;}
+.es-s{font-size:13px;color:var(--muted);line-height:1.5;}
+.es-btn{display:inline-block;margin-top:14px;background:var(--gold);color:white;border:none;border-radius:11px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+ 
+/* SCAN */
+.uscan-wrap{padding:18px 20px;}
+.scan-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.sm{background:white;border:1.5px solid var(--border);border-radius:13px;padding:13px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;transition:border-color .15s;}
+.sm:hover{border-color:var(--gold);}
+.sm-icon{font-size:24px;}.sm-lbl{font-size:12px;font-weight:500;color:var(--ink);}.sm-sub{font-size:10px;color:var(--muted);text-align:center;}
+.scan-res{background:white;border:1.5px solid var(--sage);border-radius:16px;padding:14px;margin-bottom:12px;animation:fadeUp .3s ease;}
+.sr-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.sr-t{font-family:'Playfair Display',serif;font-size:16px;color:var(--ink);}.sr-a{font-size:12px;color:var(--muted);}
+.sr-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(221,211,190,.4);}
+.sr-row:last-of-type{border:none;}
+.sr-key{font-size:12px;color:var(--muted);}.sr-val{font-size:12px;font-weight:500;color:var(--ink);}
+.nav-shelf{background:var(--ink);color:var(--parchment);border:none;border-radius:11px;padding:11px;width:100%;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;}
+.borrow-btn{background:var(--gold);color:white;border:none;border-radius:11px;padding:11px;width:100%;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;}
+.limit-warn{background:#fde8d8;border:1px solid rgba(139,58,30,.2);border-radius:11px;padding:10px 12px;font-size:12px;color:var(--rust);text-align:center;margin-top:6px;}
+ 
+/* EXPLORE */
+.expl-wrap{padding:14px 20px;}
+.sf{display:flex;align-items:center;gap:8px;background:white;border:1.5px solid var(--border);border-radius:11px;padding:9px 13px;margin-bottom:12px;}
+.sf input{flex:1;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);}
+.eb{display:flex;gap:11px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(221,211,190,.35);cursor:pointer;}
+.ebi{width:42px;height:52px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.eb-t{font-size:13px;font-weight:600;color:var(--ink);}.eb-a{font-size:11px;color:var(--muted);}
+.eb-sh{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);background:rgba(200,146,42,.1);padding:2px 6px;border-radius:4px;margin-top:3px;display:inline-block;}
+ 
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,18,8,.6);backdrop-filter:blur(4px);z-index:200;align-items:flex-end;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--cream);border-radius:26px 26px 0 0;width:390px;padding:20px 22px 36px;animation:slideUp .3s ease;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.m-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+.m-emo{font-size:50px;text-align:center;margin-bottom:8px;}
+.m-title{font-family:'Playfair Display',serif;font-size:19px;color:var(--ink);margin-bottom:2px;}
+.m-auth-t{font-size:13px;color:var(--muted);margin-bottom:10px;}
+.m-shelf-b{font-family:'DM Mono',monospace;background:rgba(200,146,42,.1);color:var(--gold);padding:7px 13px;border-radius:9px;font-size:13px;text-align:center;margin-bottom:11px;letter-spacing:1px;}
+.mr{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(221,211,190,.3);}
+.mr:last-of-type{border:none;}
+.mk{font-size:12px;color:var(--muted);}.mv{font-size:12px;font-weight:500;color:var(--ink);}
+.m-btns{display:flex;gap:9px;margin-top:12px;}
+.mbp{flex:1;background:var(--ink);color:var(--parchment);border:none;border-radius:12px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.mbs{flex:1;background:white;color:var(--ink);border:1.5px solid var(--border);border-radius:12px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;}
+ 
+/* QR */
+.qr-page{flex:1;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 28px;text-align:center;}
+.qr-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--parchment);margin-bottom:4px;}
+.qr-sub{font-size:12px;color:rgba(247,242,232,.35);margin-bottom:22px;}
+.qr-box{background:white;border-radius:20px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.4);margin-bottom:14px;}
+.qr-url{font-family:'DM Mono',monospace;font-size:9px;color:rgba(247,242,232,.22);word-break:break-all;padding:0 8px;}
+.qr-back{margin-top:22px;font-size:13px;color:var(--gold-light);cursor:pointer;text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen" id="screen">
+ 
+<!-- ══ PAGE 1: ROLE SELECT ══ -->
+<div class="page active" id="pg-role">
+  <div class="role-bg">
+    <div class="rlogo">Library<span>Scan</span></div>
+    <div class="rtag">Automatic Library Book Detection System</div>
+    <div class="role-cards">
+      <div class="role-card" style="border-color:rgba(61,139,205,.25)" onclick="goTo('pg-gate')">
+        <span class="rc-icon">🏛️</span>
+        <div class="rc-title">Librarian</div>
+        <div class="rc-sub">Staff only<br>requires access code</div>
+      </div>
+      <div class="role-card" onclick="goTo('pg-user-auth');uMode('login')">
+        <span class="rc-icon">📖</span>
+        <div class="rc-title">Member</div>
+        <div class="rc-sub">Browse, borrow<br>&amp; track books</div>
+      </div>
+    </div>
+    <div class="qr-trigger" onclick="showQR()">
+      <span style="font-size:18px">📱</span>
+      <span>Open on phone — scan QR</span>
+    </div>
+  </div>
+</div>
+ 
+<!-- ══ PAGE 2: ADMIN CODE GATE ══ -->
+<div class="page" id="pg-gate">
+  <div class="code-gate">
+    <div class="gate-icon">🔐</div>
+    <div class="gate-title">Librarian Access Only</div>
+    <div class="gate-sub">This portal is restricted to authorised library staff. Enter the 4-digit staff code to proceed.</div>
+    <div class="code-dots" id="code-dots">
+      <div class="cdot" id="cd0"></div><div class="cdot" id="cd1"></div>
+      <div class="cdot" id="cd2"></div><div class="cdot" id="cd3"></div>
+    </div>
+    <div class="numpad">
+      <div class="nk" onclick="nk('1')">1</div><div class="nk" onclick="nk('2')">2</div><div class="nk" onclick="nk('3')">3</div>
+      <div class="nk" onclick="nk('4')">4</div><div class="nk" onclick="nk('5')">5</div><div class="nk" onclick="nk('6')">6</div>
+      <div class="nk" onclick="nk('7')">7</div><div class="nk" onclick="nk('8')">8</div><div class="nk" onclick="nk('9')">9</div>
+      <div class="nk" onclick="nkClear()" style="font-size:13px;color:rgba(255,255,255,.4)">CLR</div>
+      <div class="nk" onclick="nk('0')">0</div>
+      <div class="nk" onclick="nkDel()" style="font-size:16px">⌫</div>
+    </div>
+    <div class="gate-err" id="gate-err"></div>
+    <div class="gate-hint">Staff code: 2 0 2 4</div>
+    <div class="gate-back" onclick="goTo('pg-role')">← Back</div>
+  </div>
+</div>
+ 
+<!-- ══ PAGE 3: ADMIN AUTH ══ -->
+<div class="page" id="pg-admin-auth">
+  <div class="auth-top">
+    <div class="auth-back" onclick="goTo('pg-gate')">← Back</div>
+    <div class="auth-badge">🏛️ LIBRARIAN PORTAL</div>
+    <div class="auth-htitle">Staff Login</div>
+    <div class="auth-hsub">Authorised library staff only</div>
+  </div>
+  <div class="auth-body">
+    <div class="tab-row">
+      <button class="tab-btn on" id="atab-l" onclick="aMode('login')">Sign In</button>
+      <button class="tab-btn" id="atab-r" onclick="aMode('reg')">Register Staff</button>
+    </div>
+    <div id="a-name-wrap" style="display:none;"><div class="fl">Full Name</div><input class="fi" id="a-name" type="text" placeholder="Librarian name"></div>
+    <div class="fl">Staff Email</div>
+    <input class="fi" id="a-email" type="email" placeholder="librarian@library.edu">
+    <div class="fl">Password</div>
+    <input class="fi" id="a-pass" type="password" placeholder="••••••••">
+    <div class="err-msg" id="a-err"></div>
+    <button class="btn-gold" onclick="doAdminAuth()">Enter Portal →</button>
+  </div>
+</div>
+ 
+<!-- ══ PAGE 4: USER AUTH ══ -->
+<div class="page" id="pg-user-auth">
+  <div class="auth-top">
+    <div class="auth-back" onclick="goTo('pg-role')">← Back</div>
+    <div class="auth-badge">📖 MEMBER PORTAL</div>
+    <div class="auth-htitle">Welcome</div>
+    <div class="auth-hsub">Sign in or create your library account</div>
+  </div>
+  <div class="auth-body">
+    <div class="tab-row">
+      <button class="tab-btn on" id="utab-l" onclick="uMode('login')">Sign In</button>
+      <button class="tab-btn" id="utab-r" onclick="uMode('reg')">Register</button>
+    </div>
+    <div id="u-reg-fields" style="display:none;">
+      <div class="fl">Full Name *</div><input class="fi" id="u-name" type="text" placeholder="Your full name">
+      <div class="fl">Roll / ID Number *</div><input class="fi" id="u-roll" type="text" placeholder="e.g. 2024CS001">
+      <div class="fl">Department</div><input class="fi" id="u-dept" type="text" placeholder="e.g. Computer Science">
+      <div class="fl">Phone Number</div><input class="fi" id="u-phone" type="tel" placeholder="e.g. 9876543210">
+    </div>
+    <div id="u-login-fields">
+      <div class="fl">Email Address</div><input class="fi" id="u-email-l" type="email" placeholder="you@college.edu">
+      <div class="fl">Password</div><input class="fi" id="u-pass-l" type="password" placeholder="••••••••">
+    </div>
+    <div id="u-reg-creds" style="display:none;">
+      <div class="fl">Email Address *</div><input class="fi" id="u-email-r" type="email" placeholder="you@college.edu">
+      <div class="fl">Create Password *</div><input class="fi" id="u-pass-r" type="password" placeholder="••••••••">
+    </div>
+    <div class="err-msg" id="u-err"></div>
+    <button class="btn-gold" id="u-auth-btn" onclick="doUserAuth()">Sign In →</button>
+  </div>
+</div>
+ 
+<!-- ══ PAGE 5: ADMIN DASHBOARD ══ -->
+<div class="page" id="pg-admin">
+  <div class="app-shell">
+    <!-- dashboard tab -->
+    <div id="at-home" class="cscroll" style="flex:1;">
+      <div class="admin-hero">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div class="ah-lbl">Librarian</div><div class="ah-name" id="admin-display-name">—</div><div class="ah-badge">🔑 Staff Access</div></div>
+          <div style="background:rgba(255,255,255,.07);border-radius:9px;padding:7px 11px;text-align:right;"><div style="font-size:10px;color:rgba(255,255,255,.28)">Today</div><div style="font-size:14px;font-weight:600;color:white" id="admin-date"></div></div>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-num" id="kpi-total">0</div><div class="kpi-lbl">Total Books</div><div class="kpi-t tup">↑ 12 this week</div></div>
+        <div class="kpi"><div class="kpi-num" id="kpi-avail">0</div><div class="kpi-lbl">Available</div><div class="kpi-t tdn">Live count</div></div>
+        <div class="kpi"><div class="kpi-num" id="kpi-mem">0</div><div class="kpi-lbl">Members</div><div class="kpi-t tup">Registered</div></div>
+        <div class="kpi"><div class="kpi-num" id="kpi-over">0</div><div class="kpi-lbl">Overdue</div><div class="kpi-t tdn">Needs follow-up</div></div>
+      </div>
+      <div class="sec-head" style="padding-top:10px;"><h3>Books</h3><a onclick="aTab('books')">See all →</a></div>
+      <div id="a-book-list"></div>
+      <div class="sec-head" style="padding-top:4px;"><h3>Members</h3><a onclick="aTab('users')">See all →</a></div>
+      <div id="a-user-preview"></div>
+      <div style="height:16px;"></div>
+    </div>
+    <!-- books tab -->
+    <div id="at-books" class="cscroll" style="flex:1;display:none;">
+      <div style="padding:16px 20px 10px;font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);">Book Inventory</div>
+      <div style="padding:0 20px 10px;"><div class="sf"><span>🔍</span><input type="text" placeholder="Search…" oninput="aSearch(this.value)"></div></div>
+      <div id="a-full-list"></div><div style="height:16px;"></div>
+    </div>
+    <!-- add book tab -->
+    <div id="at-add" class="cscroll" style="flex:1;display:none;">
+      <div class="add-wrap">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);margin-bottom:3px;">Add New Book</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:13px;">Scan barcode or fill manually</div>
+        <div class="scan-box" onclick="aScan()"><div class="sc-c"><span></span></div>
+        <div id="scanner" style="width:100%; height:200px; display:none;"></div>
+        <div class="sline"></div><span style="font-size:38px;opacity:.22">📷</span><div class="scan-hint">Tap to scan barcode</div></div>
+        <div style="font-family:'Playfair Display',serif;font-size:15px;color:var(--ink);margin-bottom:11px;">— or fill manually —</div>
+        <div class="mb12"><div class="fl">Book Title</div><input class="fi" id="ab-title" type="text" placeholder="e.g. Clean Code"></div>
+        <div class="mb12"><div class="fl">Author</div><input class="fi" id="ab-author" type="text" placeholder="e.g. Robert C. Martin"></div>
+        <div class="form-r mb12">
+          <div><div class="fl">ISBN</div><input class="fi" id="ab-isbn" type="text" placeholder="978-…"></div>
+          <div><div class="fl">Category</div><select class="fi" id="ab-cat"><option>Technology</option><option>Science</option><option>History</option><option>Fiction</option><option>Arts</option></select></div>
+        </div>
+        <div class="form-r mb12">
+          <div><div class="fl">Shelf Code</div><input class="fi" id="ab-shelf" type="text" placeholder="A-12-R3"></div>
+          <div><div class="fl">Floor / Row</div><input class="fi" id="ab-floor" type="text" placeholder="Ground, R3"></div>
+        </div>
+        <div class="mb12"><div class="fl">Year Published</div><input class="fi" id="ab-yr" type="number" placeholder="e.g. 2008"></div>
+        <button class="add-btn" onclick="addBook()">➕ Add to Library</button>
+        <div class="toast" id="add-toast">✓ Book added successfully!</div>
+      </div>
+    </div>
+    <!-- members tab -->
+    <div id="at-users" class="cscroll" style="flex:1;display:none;">
+      <div style="padding:16px 20px 12px;font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);">Registered Members</div>
+      <div id="a-full-users"></div><div style="height:16px;"></div>
+    </div>
+    <nav class="bnav">
+      <div class="ni-wrap on" id="anav-home" onclick="aTab('home')"><div class="ni">🏠</div><div class="nl">Dashboard</div></div>
+      <div class="ni-wrap" id="anav-books" onclick="aTab('books')"><div class="ni">📚</div><div class="nl">Books</div></div>
+      <div class="ni-wrap" id="anav-add" onclick="aTab('add')"><div class="ni">➕</div><div class="nl">Add</div></div>
+      <div class="ni-wrap" id="anav-users" onclick="aTab('users')"><div class="ni">👥</div><div class="nl">Members</div></div>
+      <div class="ni-wrap" onclick="goTo('pg-role')"><div class="ni">🚪</div><div class="nl">Logout</div></div>
+    </nav>
+  </div>
+</div>
+ 
+<!-- ══ PAGE 6: USER DASHBOARD ══ -->
+<div class="page" id="pg-user">
+  <div class="app-shell">
+    <!-- home tab -->
+    <div id="ut-home" class="cscroll" style="flex:1;">
+      <div class="user-hero">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div class="uh-lbl">Welcome back</div>
+            <div class="uh-name" id="u-display-name">—</div>
+            <div class="uh-id" id="u-display-id">—</div>
+            <div class="uh-dept" id="u-display-dept">—</div>
+          </div>
+          <div class="uav-sm" id="u-display-av" style="width:40px;height:40px;font-size:15px;background:linear-gradient(135deg,var(--gold),var(--rust));flex-shrink:0;">—</div>
+        </div>
+        <div id="u-hero-status"></div>
+      </div>
+      <div class="u-stats">
+        <div class="us"><div class="us-num" id="us-borrow">0</div><div class="us-lbl">Borrowed</div></div>
+        <div class="us"><div class="us-num">1</div><div class="us-lbl">Book Limit</div></div>
+        <div class="us"><div class="us-num" id="us-days">—</div><div class="us-lbl">Days Left</div></div>
+      </div>
+      <div class="sec-head" style="padding-top:14px;"><h3>My Borrowed Book</h3><a onclick="uTab('explore')">Browse →</a></div>
+      <div id="u-borrow-list"></div>
+      <div style="height:16px;"></div>
+    </div>
+    <!-- scan tab -->
+    <div id="ut-scan" class="cscroll" style="flex:1;display:none;">
+      <div class="uscan-wrap">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);margin-bottom:3px;">Book Scanner</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:13px;">Scan to locate a book &amp; borrow it</div>
+        <div class="scan-box" onclick="uScan()" style="height:175px;margin-bottom:12px;cursor:pointer;"><div class="sc-c"><span></span></div><div class="sline"></div><span style="font-size:36px;opacity:.2">📖</span><div class="scan-hint">Tap to scan barcode or cover</div></div>
+        <div id="scanner" style="width:100%; height:200px; display:none;"></div>
+        <div class="scan-modes">
+          <div class="sm" onclick="uScan()"><div class="sm-icon">📷</div><div class="sm-lbl">Barcode</div><div class="sm-sub">ISBN barcode</div></div>
+          <div class="sm" onclick="uScan()"><div class="sm-icon">🔍</div><div class="sm-lbl">Cover AI</div><div class="sm-sub">Detect cover</div></div>
+          <div class="sm"><div class="sm-icon">🗣️</div><div class="sm-lbl">Voice</div><div class="sm-sub">Say the title</div></div>
+          <div class="sm"><div class="sm-icon">✏️</div><div class="sm-lbl">Manual</div><div class="sm-sub">Type ISBN</div></div>
+        </div>
+        <div id="u-scan-result"></div>
+      </div>
+    </div>
+    <!-- explore tab -->
+    <div id="ut-explore" class="cscroll" style="flex:1;display:none;">
+      <div class="expl-wrap">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);margin-bottom:10px;">Explore Library</div>
+        <div class="sf"><span>🔍</span><input type="text" placeholder="Search title, author, ISBN…" oninput="eSearch(this.value)"></div>
+        <div id="explore-list"></div>
+      </div>
+    </div>
+    <!-- profile tab -->
+    <div id="ut-profile" class="cscroll" style="flex:1;display:none;">
+      <div style="padding:20px;">
+        <div style="background:var(--ink);border-radius:18px;padding:18px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:13px;margin-bottom:14px;">
+            <div class="uav-sm" id="pf-av" style="width:56px;height:56px;font-size:20px;background:linear-gradient(135deg,var(--gold),var(--rust));">—</div>
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--parchment);" id="pf-name">—</div>
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(247,242,232,.32);margin-top:2px;" id="pf-id">—</div>
+              <div style="background:rgba(200,146,42,.2);color:var(--gold-light);font-size:10px;font-weight:600;padding:3px 9px;border-radius:6px;margin-top:6px;display:inline-block;">📖 Library Member</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><div style="font-size:10px;color:rgba(247,242,232,.3);text-transform:uppercase;letter-spacing:.3px;">Roll / ID</div><div style="font-size:12px;color:rgba(247,242,232,.7);margin-top:2px;" id="pf-roll">—</div></div>
+            <div><div style="font-size:10px;color:rgba(247,242,232,.3);text-transform:uppercase;letter-spacing:.3px;">Department</div><div style="font-size:12px;color:rgba(247,242,232,.7);margin-top:2px;" id="pf-dept">—</div></div>
+            <div><div style="font-size:10px;color:rgba(247,242,232,.3);text-transform:uppercase;letter-spacing:.3px;">Phone</div><div style="font-size:12px;color:rgba(247,242,232,.7);margin-top:2px;" id="pf-phone">—</div></div>
+            <div><div style="font-size:10px;color:rgba(247,242,232,.3);text-transform:uppercase;letter-spacing:.3px;">Email</div><div style="font-size:12px;color:rgba(247,242,232,.7);margin-top:2px;word-break:break-all;" id="pf-email">—</div></div>
+            <div style="grid-column:span 2;"><div style="font-size:10px;color:rgba(247,242,232,.3);text-transform:uppercase;letter-spacing:.3px;">Book Limit</div><div style="font-size:12px;color:var(--gold-light);margin-top:2px;font-weight:500;">1 book at a time</div></div>
+          </div>
+        </div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;color:var(--ink);margin-bottom:10px;">Currently Borrowed</div>
+        <div id="pf-borrowed"></div>
+        <button style="width:100%;background:transparent;border:1.5px solid var(--border);border-radius:11px;padding:11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--rust);cursor:pointer;margin-top:8px;" onclick="logoutUser()">Sign Out</button>
+      </div>
+    </div>
+    <nav class="bnav">
+      <div class="ni-wrap on" id="unav-home" onclick="uTab('home')"><div class="ni">🏠</div><div class="nl">Home</div></div>
+      <div class="ni-wrap" id="unav-scan" onclick="uTab('scan')"><div class="ni">📷</div><div class="nl">Scan</div></div>
+      <div class="ni-wrap" id="unav-explore" onclick="uTab('explore')"><div class="ni">📚</div><div class="nl">Explore</div></div>
+      <div class="ni-wrap" id="unav-profile" onclick="uTab('profile')"><div class="ni">👤</div><div class="nl">Profile</div></div>
+    </nav>
+  </div>
+</div>
+ 
+<!-- ══ PAGE 7: QR ══ -->
+<div class="page" id="pg-qr">
+  <div class="qr-page">
+    <div class="qr-title">Open on Mobile</div>
+    <div class="qr-sub">Scan with your phone camera</div>
+    <div class="qr-box"><div id="qr-canvas"></div></div>
+    <div class="qr-url" id="qr-url"></div>
+    <div class="qr-back" onclick="goTo('pg-role')">← Back to app</div>
+  </div>
+</div>
+ 
+  </div><!-- /screen -->
+</div><!-- /phone -->
+ 
+<!-- BOOK MODAL -->
+<div class="overlay" id="book-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="m-handle"></div>
+    <div class="m-emo" id="m-emo"></div>
+    <div class="m-title" id="m-title"></div>
+    <div class="m-auth-t" id="m-auth-t"></div>
+    <div class="m-shelf-b" id="m-shelf-b"></div>
+    <div class="mr"><span class="mk">Category</span><span class="mv" id="m-cat"></span></div>
+    <div class="mr"><span class="mk">ISBN</span><span class="mv" id="m-isbn"></span></div>
+    <div class="mr"><span class="mk">Status</span><span class="mv" id="m-st"></span></div>
+    <div class="mr"><span class="mk">Floor / Row</span><span class="mv" id="m-floor"></span></div>
+    <div class="mr"><span class="mk">Year</span><span class="mv" id="m-yr"></span></div>
+    <div class="m-btns">
+      <button class="mbp" onclick="closeModal()">📍 Navigate to Shelf</button>
+      <button class="mbs" onclick="borrowFromModal()">📚 Borrow</button>
+    </div>
+  </div>
+</div>
+ 
+<script>
+
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCWqlaNvZQvVyH7jhcGcgunfNu-QiPZyEY",
+  authDomain: "libraryscan-f1d29.firebaseapp.com",
+  projectId: "libraryscan-f1d29",
+  storageBucket: "libraryscan-f1d29.firebasestorage.app",
+  messagingSenderId: "975970276803",
+  appId: "1:975970276803:web:d7c319c50802d37b2d5976",
+  measurementId: "G-9KSMWSZTHC"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
+/* ═══════ DATA ═══════ */
+let books=[
+  {id:1,e:'📙',t:'Clean Code',a:'Robert C. Martin',cat:'Technology',isbn:'978-0-132-35088-4',st:'Available',shelf:'A-12-R3',floor:'Ground, Row 3',bg:'#fde8d8',yr:2008},
+  {id:2,e:'📗',t:'Sapiens',a:'Yuval Noah Harari',cat:'History',isbn:'978-0-062-31609-7',st:'Available',shelf:'B-05-R1',floor:'First, Row 1',bg:'#d4e5d0',yr:2011},
+  {id:3,e:'📘',t:'Design Patterns',a:'Gang of Four',cat:'Technology',isbn:'978-0-201-63361-0',st:'Available',shelf:'A-17-R4',floor:'Ground, Row 4',bg:'#e8eaf6',yr:1994},
+  {id:4,e:'📕',t:'A Brief History of Time',a:'Stephen Hawking',cat:'Science',isbn:'978-0-553-38016-3',st:'Available',shelf:'C-03-R2',floor:'Second, Row 2',bg:'#fce4ec',yr:1988},
+  {id:5,e:'📒',t:'The Alchemist',a:'Paulo Coelho',cat:'Fiction',isbn:'978-0-061-77968-3',st:'Available',shelf:'D-09-R1',floor:'Second, Row 1',bg:'#fff9c4',yr:1988},
+  {id:6,e:'📓',t:'Atomic Habits',a:'James Clear',cat:'Science',isbn:'978-0-735-21129-2',st:'Available',shelf:'B-11-R3',floor:'First, Row 3',bg:'#f3e5f5',yr:2018},
+  {id:7,e:'📔',t:'Zero to One',a:'Peter Thiel',cat:'Technology',isbn:'978-0-804-13929-8',st:'Available',shelf:'A-08-R2',floor:'Ground, Row 2',bg:'#e0f7fa',yr:2014},
+  {id:8,e:'📖',t:'Art of War',a:'Sun Tzu',cat:'History',isbn:'978-1-599-86963-7',st:'Available',shelf:'C-01-R1',floor:'Second, Row 1',bg:'#fff3e0',yr:-500},
+];
+let members=[];
+let currentUser=null;
+ 
+/* ═══════ NAVIGATION ═══════ */
+function goTo(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('screen').scrollTop=0;
+}
+ 
+/* ═══════ ADMIN CODE GATE ═══════ */
+const ADMIN_CODE='2024';
+let codeStr='';
+function nk(d){if(codeStr.length>=4)return;codeStr+=d;dots();if(codeStr.length===4)checkCode();}
+function nkDel(){codeStr=codeStr.slice(0,-1);dots();}
+function nkClear(){codeStr='';dots();document.getElementById('gate-err').textContent='';}
+function dots(){for(let i=0;i<4;i++)document.getElementById('cd'+i).classList.toggle('filled',i<codeStr.length);}
+function checkCode(){
+  if(codeStr===ADMIN_CODE){
+    document.getElementById('gate-err').textContent='';
+    setTimeout(()=>{codeStr='';dots();goTo('pg-admin-auth');},250);
+  }else{
+    document.getElementById('gate-err').textContent='❌ Wrong code. Try again.';
+    setTimeout(()=>{codeStr='';dots();document.getElementById('gate-err').textContent='';},1200);
+  }
+}
+ 
+/* ═══════ ADMIN AUTH ═══════ */
+function aMode(m){
+  document.getElementById('atab-l').classList.toggle('on',m==='login');
+  document.getElementById('atab-r').classList.toggle('on',m==='reg');
+  document.getElementById('a-name-wrap').style.display=m==='reg'?'block':'none';
+}
+function doAdminAuth(){
+  const email=document.getElementById('a-email').value.trim();
+  const pass=document.getElementById('a-pass').value;
+  if(!email||!pass){document.getElementById('a-err').textContent='Fill all fields.';return;}
+  document.getElementById('a-err').textContent='';
+  const name=document.getElementById('a-name').value.trim()||email.split('@')[0];
+  document.getElementById('admin-display-name').textContent=name;
+  document.getElementById('admin-date').textContent=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  refreshKPIs();
+  renderABooks(books,'a-book-list',5);
+  renderABooks(books,'a-full-list');
+  renderAUserPreview();
+  renderAUsers();
+  goTo('pg-admin');aTab('home');
+}
+ 
+/* ═══════ USER AUTH ═══════ */
+let uAuthMode='login';
+function uMode(m){
+  uAuthMode=m;
+  document.getElementById('utab-l').classList.toggle('on',m==='login');
+  document.getElementById('utab-r').classList.toggle('on',m==='reg');
+  document.getElementById('u-reg-fields').style.display=m==='reg'?'block':'none';
+  document.getElementById('u-reg-creds').style.display=m==='reg'?'block':'none';
+  document.getElementById('u-login-fields').style.display=m==='login'?'block':'none';
+  document.getElementById('u-auth-btn').textContent=m==='reg'?'Create Account →':'Sign In →';
+}
+function doUserAuth(){
+  const err=document.getElementById('u-err');
+  if(uAuthMode==='reg'){
+    const name=document.getElementById('u-name').value.trim();
+    const roll=document.getElementById('u-roll').value.trim();
+    const dept=document.getElementById('u-dept').value.trim();
+    const phone=document.getElementById('u-phone').value.trim();
+    const email=document.getElementById('u-email-r').value.trim();
+    const pass=document.getElementById('u-pass-r').value;
+    if(!name||!roll||!email||!pass){err.textContent='Name, Roll No, Email and Password are required.';return;}
+    if(members.find(m=>m.email===email)){err.textContent='Account exists. Please sign in.';return;}
+    err.textContent='';
+    const mid='MEM-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*90000)+10000);
+    currentUser={name,roll,dept:dept||'—',phone:phone||'—',email,mid,borrowedId:null,dueDate:null};
+    members.push({...currentUser});
+    loadUserDash(); goTo('pg-user'); uTab('home');
+  }else{
+    const email=document.getElementById('u-email-l').value.trim();
+    const pass=document.getElementById('u-pass-l').value;
+    if(!email||!pass){err.textContent='Please enter email and password.';return;}
+    const found=members.find(m=>m.email===email);
+    if(!found){err.textContent='No account found. Please register first.';return;}
+    err.textContent='';
+    currentUser={...found};
+    loadUserDash(); goTo('pg-user'); uTab('home');
+  }
+}
+function logoutUser(){currentUser=null;goTo('pg-role');}
+ 
+/* ═══════ USER DASHBOARD ═══════ */
+const uColors=['#c8922a','#4a6741','#3d8bcd','#8b3a1e','#6a4c9c','#2a7a8a'];
+function initials(n){return n.trim().split(/\s+/).map(x=>x[0]).join('').toUpperCase().slice(0,2);}
+function loadUserDash(){
+  const u=currentUser;
+  const av=initials(u.name);
+  set('u-display-name',u.name);
+  set('u-display-id',u.mid+' · '+u.roll);
+  set('u-display-dept',u.dept+' · '+u.phone);
+  set('u-display-av',av);
+  set('pf-av',av);
+  set('pf-name',u.name);
+  set('pf-id',u.mid);
+  set('pf-roll',u.roll);
+  set('pf-dept',u.dept);
+  set('pf-phone',u.phone);
+  set('pf-email',u.email);
+  renderUserHome();
+  renderExplore(books);
+}
+
+function startScanner(callback){
+  document.getElementById("scanner").style.display = "block";
+  constraints: {
+  facingMode: "environment"
+  }
+  Quagga.init({
+    inputStream: {
+      type: "LiveStream",
+      target: document.querySelector('#scanner'),
+      constraints: {
+        facingMode: "environment" // back camera
+      }
+    },
+    decoder: {
+      readers: [
+        "ean_reader",
+        "ean_8_reader",
+        "code_128_reader"
+      ]
+    }
+  }, function(err){
+    if(err){
+      console.error(err);
+      alert("Camera error");
+      return;
+    }
+    Quagga.start();
+  });
+
+  Quagga.onDetected(function(data){
+    const code = data.codeResult.code;
+  
+    Quagga.stop();
+    document.getElementById("scanner").style.display = "none";
+
+    callback(code);
+  });
+}
+
+function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+function renderUserHome(){
+  const u=currentUser;
+  const b=u.borrowedId?books.find(x=>x.id===u.borrowedId):null;
+  const heroEl=document.getElementById('u-hero-status');
+  if(b){
+    heroEl.innerHTML=`<div class="reading-card"><span style="font-size:24px">${b.e}</span><div><div style="font-size:10px;color:rgba(247,242,232,.38);text-transform:uppercase;letter-spacing:.3px;">Currently borrowed</div><div style="font-size:13px;font-weight:500;color:var(--parchment);margin-top:2px;">${b.t}</div><div style="font-size:10px;color:var(--gold-light);margin-top:2px;">⏳ Due: ${u.dueDate}</div></div></div>`;
+    set('us-borrow','1');
+    const days=Math.max(0,Math.round((new Date(u.dueDate)-new Date())/86400000));
+    set('us-days',days);
+  }else{
+    heroEl.innerHTML=`<div class="no-book-card"><div style="font-size:13px;color:rgba(247,242,232,.42);">No book borrowed yet</div><div style="font-size:11px;color:rgba(247,242,232,.22);margin-top:3px;">You may borrow 1 book at a time</div></div>`;
+    set('us-borrow','0'); set('us-days','—');
+  }
+  const bbHtml=b?`<div class="bb-card" onclick="openModal(${b.id})">
+    <div class="bb-cov" style="background:${b.bg}">${b.e}</div>
+    <div style="flex:1"><div class="bb-title">${b.t}</div><div class="bb-author">${b.a}</div><span class="bb-shelf">📍 ${b.shelf}</span><div class="bb-due" style="color:var(--sage)">✓ Due: ${u.dueDate}</div></div>
+    <button class="ret-btn" onclick="event.stopPropagation();returnBook()">Return</button>
+  </div>`:`<div class="empty-state"><div class="es-icon">📭</div><div class="es-t">No book borrowed</div><div class="es-s">You may borrow 1 book at a time.<br>Browse the library to find one.</div><button class="es-btn" onclick="uTab('explore')">Browse Library →</button></div>`;
+  document.getElementById('u-borrow-list').innerHTML=bbHtml;
+  document.getElementById('pf-borrowed').innerHTML=b?`<div class="bb-card" onclick="openModal(${b.id})"><div class="bb-cov" style="background:${b.bg}">${b.e}</div><div style="flex:1"><div class="bb-title">${b.t}</div><div class="bb-author">${b.a}</div><span class="bb-shelf">📍 ${b.shelf}</span><div class="bb-due" style="color:var(--sage)">✓ Due: ${u.dueDate}</div></div><button class="ret-btn" onclick="event.stopPropagation();returnBook()">Return</button></div>`:`<div style="padding:16px;text-align:center;font-size:13px;color:var(--muted);">No book currently borrowed.</div>`;
+}
+
+function returnBook(){
+  if(!currentUser || !currentUser.borrowedId){
+    alert("No book to return");
+    return;
+  }
+
+  const book = books.find(b => b.id === currentUser.borrowedId);
+
+  if(book){
+    book.st = 'Available';
+  }
+
+  currentUser.borrowedId = null;
+  currentUser.dueDate = null;
+
+  const m = members.find(x => x.mid === currentUser.mid);
+  if(m){
+    m.borrowedId = null;
+    m.dueDate = null;
+  }
+
+  // refresh UI
+  renderUserHome();
+  renderExplore(books);
+  refreshKPIs();
+  renderABooks(books,'a-full-list');
+  renderABooks(books,'a-book-list',5);
+
+  alert("Book returned!");
+}
+
+
+
+function borrowBook(bookId){
+  if(!currentUser){
+    alert("Please login first");
+    return;
+  }
+
+  if(currentUser.borrowedId){
+    alert("Return your current book first");
+    return;
+  }
+
+  const book = books.find(b => b.id === bookId);
+
+  if(!book || book.st !== 'Available'){
+    alert("Book not available");
+    return;
+  }
+
+  book.st = 'Borrowed';
+
+  const due = new Date();
+  due.setDate(due.getDate() + 14);
+
+  currentUser.borrowedId = bookId;
+  currentUser.dueDate = due.toLocaleDateString('en-IN');
+
+  // sync member data
+  const m = members.find(x => x.mid === currentUser.mid);
+  if(m){
+    m.borrowedId = bookId;
+    m.dueDate = currentUser.dueDate;
+  }
+
+  // refresh everything
+  renderUserHome();
+  renderExplore(books);
+  refreshKPIs();
+  renderABooks(books,'a-full-list');
+  renderABooks(books,'a-book-list',5);
+
+  alert("Book borrowed successfully!");
+}
+ 
+/* ═══════ USER SCAN ═══════ */
+
+
+
+function uScan(){
+  startScanner(function(code){
+
+    const book = books.find(b => b.isbn === code);
+
+    if(!book){
+      alert("Book not found in library");
+      return;
+    }
+
+    const hasBook = currentUser && currentUser.borrowedId;
+    const canBorrow = currentUser && !hasBook && book.st === 'Available';
+
+    document.getElementById('u-scan-result').innerHTML = `
+    <div class="scan-res">
+      <div class="sr-head">
+        <div style="width:48px;height:60px;border-radius:9px;background:${book.bg};display:flex;align-items:center;justify-content:center;font-size:24px;">${book.e}</div>
+        <div>
+          <div class="sr-t">${book.t}</div>
+          <div class="sr-a">${book.a}</div>
+        </div>
+      </div>
+
+      <div class="sr-row"><span class="sr-key">ISBN</span><span class="sr-val">${book.isbn}</span></div>
+      <div class="sr-row"><span class="sr-key">Status</span><span class="sr-val">${book.st}</span></div>
+
+      ${canBorrow ? `<button class="borrow-btn" onclick="borrowBook(${book.id})">Borrow</button>` : ''}
+    </div>`;
+  });
+}
+
+function uScan(){
+  const b=books[Math.floor(Math.random()*books.length)];
+  const hasBook=currentUser&&currentUser.borrowedId;
+  const canBorrow=currentUser&&!hasBook&&b.st==='Available';
+  document.getElementById('u-scan-result').innerHTML=`<div class="scan-res">
+    <div class="sr-head"><div style="width:48px;height:60px;border-radius:9px;background:${b.bg};display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${b.e}</div><div><div class="sr-t">${b.t}</div><div class="sr-a">${b.a}</div></div></div>
+    <div class="sr-row"><span class="sr-key">Category</span><span class="sr-val">${b.cat}</span></div>
+    <div class="sr-row"><span class="sr-key">ISBN</span><span class="sr-val">${b.isbn}</span></div>
+    <div class="sr-row"><span class="sr-key">Status</span><span class="sr-val" style="color:${b.st==='Available'?'var(--sage)':'var(--rust)'}">${b.st==='Available'?'✓ Available':'✗ Currently Borrowed'}</span></div>
+    <div class="sr-row"><span class="sr-key">Shelf</span><span class="sr-val" style="font-family:'DM Mono',monospace;color:var(--gold)">${b.shelf}</span></div>
+    <div class="sr-row"><span class="sr-key">Floor / Row</span><span class="sr-val">${b.floor}</span></div>
+    <button class="nav-shelf">📍 Navigate to Shelf ${b.shelf}</button>
+    ${canBorrow?`<button class="borrow-btn" onclick="borrowBook(${b.id})">📚 Borrow This Book</button>`:''}
+    ${hasBook&&b.st==='Available'?`<div class="limit-warn">⚠ You already have a borrowed book. Return it first to borrow another.</div>`:''}
+  </div>`;
+}
+
+async function registerUser(email, password){
+  try{
+    const user = await createUserWithEmailAndPassword(auth, email, password);
+    alert("✅ Registered successfully");
+  }catch(err){
+    alert(err.message);
+  }
+}
+
+async function loginUser(email, password){
+  try{
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("✅ Login success");
+
+    loadBooks();
+    goTo('pg-user');
+
+  }catch(err){
+    alert(err.message);
+  }
+}
+
+async function borrowBook(bookId){
+
+  const bookRef = fb.doc(db, "books", bookId);
+
+  await fb.updateDoc(bookRef, {
+    status: "Borrowed"
+  });
+
+  alert("📚 Book Borrowed!");
+  loadBooks();
+}
+
+async function returnBook(bookId){
+
+  const bookRef = fb.doc(db, "books", bookId);
+
+  await fb.updateDoc(bookRef, {
+    status: "Available"
+  });
+
+  alert("✅ Book Returned!");
+  loadBooks();
+}
+
+ 
+/* ═══════ EXPLORE ═══════ */
+
+function renderExplore(data){
+  document.getElementById('explore-list').innerHTML = data.map(b => {
+    
+    const canBorrow = currentUser && !currentUser.borrowedId && b.status === 'Available';
+
+    return `
+    <div class="eb">
+      <div class="ebi" style="background:${b.bg}">${b.e}</div>
+      
+      <div style="flex:1">
+        <div class="eb-t">${b.t}</div>
+        <div class="eb-a">${b.a} · ${b.cat}</div>
+        <span class="eb-sh">📍 ${b.shelf}</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <span class="sp ${b.status==='Available'?'sp-av':'sp-br'}">${b.status}</span>
+
+        ${canBorrow ? 
+          `<button onclick="borrowBook(${b.id})" style="font-size:10px;padding:4px 8px;border:none;border-radius:6px;background:#c8922a;color:white;cursor:pointer;">
+            Borrow
+          </button>` 
+        : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderExplore(data){
+  document.getElementById('explore-list').innerHTML=data.map(b=>`<div class="eb" onclick="openModal(${b.id})">
+    <div class="ebi" style="background:${b.bg}">${b.e}</div>
+    <div style="flex:1"><div class="eb-t">${b.t}</div><div class="eb-a">${b.a} · ${b.cat}</div><span class="eb-sh">📍 ${b.shelf}</span></div>
+    <span class="sp ${b.status==='Available'?'sp-av':'sp-br'}">${b.status}</span>
+  </div>`).join('');
+}
+function eSearch(q){renderExplore(books.filter(b=>b.t.toLowerCase().includes(q.toLowerCase())||b.a.toLowerCase().includes(q.toLowerCase())));}
+ 
+/* ═══════ ADMIN HELPERS ═══════ */
+function refreshKPIs(){
+  set('kpi-total',books.length);
+  set('kpi-avail',books.filter(b=>b.status==='Available').length);
+  set('kpi-mem',members.length);
+  set('kpi-over',members.filter(m=>m.borrowedId&&m.dueDate&&new Date(m.dueDate)<new Date()).length);
+}
+function renderABooks(data,id,limit){
+  const slice=limit?data.slice(0,limit):data;
+  document.getElementById(id).innerHTML=slice.map(b=>`<div class="brow" onclick="openModal(${b.id})">
+    <div class="bico" style="background:${b.bg}">${b.e}</div>
+    <div style="flex:1"><div class="bname">${b.t}</div><div class="bmeta">${b.a} · ${b.cat}</div><span class="bshelf">📍 ${b.shelf}</span></div>
+    <span class="sp ${b.status==='Available'?'sp-av':'sp-br'}">${b.status}</span>
+  </div>`).join('');
+}
+function renderAUserPreview(){
+  const el=document.getElementById('a-user-preview');
+  el.innerHTML=members.length?members.slice(0,3).map(uRowHtml).join(''):`<div style="padding:14px 20px;font-size:13px;color:var(--muted)">No members yet.</div>`;
+}
+function renderAUsers(){
+  const el=document.getElementById('a-full-users');
+  el.innerHTML=members.length?members.map(uRowHtml).join(''):`<div style="padding:20px;font-size:13px;color:var(--muted);text-align:center;">No registered members yet.</div>`;
+}
+function uRowHtml(u){
+  const col=uColors[members.indexOf(u)%uColors.length];
+  const b=u.borrowedId?books.find(x=>x.id===u.borrowedId):null;
+  return `<div class="urow">
+    <div class="uav-sm" style="background:${col}">${initials(u.name)}</div>
+    <div style="flex:1">
+      <div class="uname">${u.name}</div>
+      <div class="uid">${u.mid} · ${u.roll}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:1px;">${u.dept} · ${u.phone}</div>
+    </div>
+    <span style="font-size:10px;font-weight:500;padding:3px 8px;border-radius:6px;background:${b?'rgba(200,146,42,.12)':'rgba(138,125,107,.1)'};color:${b?'var(--gold)':'var(--muted)'}">
+      ${b?'📚 '+b.t.slice(0,12)+'…':'No book'}
+    </span>
+  </div>`;
+}
+function aSearch(q){renderABooks(books.filter(b=>b.t.toLowerCase().includes(q.toLowerCase())||b.a.toLowerCase().includes(q.toLowerCase())),'a-full-list');}
+function aTab(t){
+  ['home','books','add','users'].forEach(x=>{
+    document.getElementById('at-'+x).style.display=x===t?'block':'none';
+    const n=document.getElementById('anav-'+x);if(n)n.classList.toggle('on',x===t);
+  });
+  if(t==='users'){renderAUsers();}
+  if(t==='home'){renderAUserPreview();}
+}
+
+function aScan(){
+  startScanner(function(code){
+    document.getElementById('ab-isbn').value = code;
+    alert("Scanned ISBN: " + code);
+  });
+}
+
+function aScan(){
+  const b=books[Math.floor(Math.random()*books.length)];
+  ['ab-title','ab-author','ab-isbn','ab-shelf','ab-floor','ab-yr'].forEach((id,i)=>{
+    const vals=[b.t,b.a,b.isbn,b.shelf,b.floor,String(b.yr)];
+    document.getElementById(id).value=vals[i];
+  });
+}
+
+async function addBook(){
+  const book = {
+    title: document.getElementById("ab-title").value,
+    author: document.getElementById("ab-author").value,
+    isbn: document.getElementById("ab-isbn").value,
+    category: document.getElementById("ab-cat").value,
+    shelf: document.getElementById("ab-shelf").value,
+    floor: document.getElementById("ab-floor").value,
+    year: document.getElementById("ab-yr").value,
+    status: "Available"
+  };
+
+  await fb.addDoc(fb.collection(db, "books"), book);
+
+  alert("✅ Book added to Firebase!");
+  loadBooks();
+}
+
+
+async function loadBooks(){
+  const snapshot = await fb.getDocs(fb.collection(db, "books"));
+
+  window.books = [];
+
+  snapshot.forEach(docSnap => {
+    books.push({
+      id: docSnap.id,
+      ...docSnap.data()
+    });
+  });
+
+  renderExplore(books);
+}
+  
+loadBooks();
+
+  const newBook = {
+    id: books.length + 1,
+    e: '📘',
+    t: title,
+    a: author,
+    cat: cat,
+    isbn: isbn || '—',
+    st: 'Available',
+    shelf: shelf,
+    floor: floor || '—',
+    bg: '#e0f7fa',
+    yr: yr || '—'
+  };
+
+  books.push(newBook);
+
+  // refresh UI
+  renderABooks(books,'a-full-list');
+  renderABooks(books,'a-book-list',5);
+  refreshKPIs();
+
+  // clear form
+  document.getElementById('ab-title').value = '';
+  document.getElementById('ab-author').value = '';
+  document.getElementById('ab-isbn').value = '';
+  document.getElementById('ab-shelf').value = '';
+  document.getElementById('ab-floor').value = '';
+  document.getElementById('ab-yr').value = '';
+
+  // show success toast
+  const toast = document.getElementById('add-toast');
+  toast.style.display = 'block';
+  setTimeout(()=> toast.style.display='none', 2000);
+}
+
+/* ═══════ USER TAB ═══════ */
+function uTab(t){
+  ['home','scan','explore','profile'].forEach(x=>{
+    document.getElementById('ut-'+x).style.display=x===t?'block':'none';
+    const n=document.getElementById('unav-'+x);if(n)n.classList.toggle('on',x===t);
+  });
+  if(t==='scan')document.getElementById('u-scan-result').innerHTML='';
+}
+ 
+/* ═══════ MODAL ═══════ */
+function openModal(id){
+  const b=books.find(x=>x.id===id);
+  set('m-emo',b.e);set('m-title',b.t);set('m-auth-t',b.a);set('m-shelf-b','📍 Shelf '+b.shelf);
+  set('m-cat',b.cat);set('m-isbn',b.isbn);set('m-st',b.st);set('m-floor',b.floor);set('m-yr',b.yr);
+  document.getElementById('book-modal').classList.add('open');
+}
+function closeModal(e){if(!e||e.target===document.getElementById('book-modal'))document.getElementById('book-modal').classList.remove('open');}
+ 
+/* ═══════ QR ═══════ */
+function showQR(){
+  goTo('pg-qr');
+  const url=window.location.href;
+  document.getElementById('qr-url').textContent=url;
+  const c=document.getElementById('qr-canvas');c.innerHTML='';
+  try{new QRCode(c,{text:url,width:200,height:200,colorDark:'#1a1208',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});}
+  catch(e){c.innerHTML='<p style="color:#888;font-size:11px;padding:16px">QR unavailable. Copy URL above.</p>';}
+}
+window.onload = () => {
+  loadBooks();
+};
+</script>
+</body>
+</html>
